@@ -15,9 +15,9 @@ class CPacket:
 
 class CPeak:
     def __init__(self, height, freq, sf):
-        this.height = height
-        this.freq = freq
-        this.fft_bin = (125e3 - freq)/125e3 * 2**sf
+        self.height = height
+        self.freq = freq
+        self.fft_bin = (125e3 - freq)/125e3 * 2**sf
 
     def __eq__(self, other):
         if isinstance(other, CPeak):
@@ -34,27 +34,27 @@ class CSymbol:
     BW = config.LORA_BW
     SF = config.LORA_SF
 
-    nsamp = FS * 2**SF / BW
+    nsamp = Fs * 2**SF / BW
 
     def __init__(self, ahead, freq, amp, length):
         self.ahead = ahead
         self.freq = freq
-        self.fft_bin = (BW - freq)/BW * 2**SF
+        self.fft_bin = (CSymbol.BW - freq)/CSymbol.BW * 2**CSymbol.SF
         self.length = length
         self.amp = amp
-        self.chirp_n = nsamp # But why tho
-        this.pkt_id = 0
+        self.chirp_n = CSymbol.nsamp # But why tho
+        self.pkt_id = 0
 
     def __eq__(self, other):
         if isinstance(other, CSymbol):
-            return abs(this.bin - other.bin) < 2
+            return abs(self.bin - other.bin) < 2
 
         return False
 
     def show(self):
         print(f'\t[peak] frequency = {self.freq:.2f}, '
               f'value = {self.fft_bin:.1f}, symbol amplitude = {self.amp:.2f},'
-              f' length = {round(this.length)}, ahead = {self.ahead}, '
+              f' length = {round(self.length)}, ahead = {self.ahead}, '
               f'belong = {self.pkt_id}\n'
               f'\t       in-window offset = '
               f'{round(self.chirp_n - self.length) if self.ahead else round(self.length)}\n')
@@ -62,7 +62,7 @@ class CSymbol:
     def write_file(self, filename, wid, belong, value):
         if self.ahead:
             offset = round(self.chirp_n - self.length)
-        else
+        else:
             offset = round(self.length)
 
         with open(filename, 'a') as f:
@@ -88,6 +88,6 @@ class CWin:
             return False
 
     def show(self):
-        print(f'Symbol Set {self.ident} ({len(self.symset)} items:\n')
+        print(f'Symbol Set {self.ident} ({len(self.symset)} items):\n')
         for sym in self.symset:
             sym.show()
