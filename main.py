@@ -5,6 +5,7 @@ import io_funcs as iof
 import math
 import numpy as np
 import symb_funcs as sf
+import frame_funcs as ff
 
 from classes import CWin
 
@@ -42,6 +43,12 @@ def main():
             windows[i].addSymbol(s)
 
         windows[i].show()
+
+    start_win, bin_value = ff.frame_detect(windows)
+
+    if not start_win:
+        print('ERROR: No packet is found!!!\n')
+        return
 
 if __name__ == '__main__':
     main()
