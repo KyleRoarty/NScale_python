@@ -6,7 +6,7 @@ import peak_funcs as pf
 
 from classes import CWin, CSymbol
 
-def frame_spectrum(data, window=512, overlap=256, nfft=2048,
+def spectrum(data, window=512, overlap=256, nfft=2048,
                    Fs=config.RX_Sampl_Rate):
     BW = config.LORA_BW
     SF = config.LORA_SF
@@ -16,7 +16,7 @@ def frame_spectrum(data, window=512, overlap=256, nfft=2048,
         overlap = 60
         nfft = 2048
 
-def frame_detect(winset):
+def detect(winset):
     Fs = config.RX_Sampl_Rate
     BW = config.LORA_BW
     SF = config.LORA_SF
@@ -48,7 +48,7 @@ def frame_detect(winset):
 
         for sym in symbset:
             # Detect consecutive preambles
-            I, key = pf.peak_nearest(state_keys, sym.fft_bin, 2)
+            I, key = pf.nearest(state_keys, sym.fft_bin, 2)
             if I < 0:
                 state_dict[sym.fft_bin] = 1
             else:
@@ -59,7 +59,7 @@ def frame_detect(winset):
                     pending_keys[key] = 10
 
             # Detect the first sync word (8)
-            I, key = pf.peak_nearest(state_keys, ((-1 + sym.fft_bin + 24) % 2**SF) + 1, 2)
+            I, key = pf.nearest(state_keys, ((-1 + sym.fft_bin + 24) % 2**SF) + 1, 2)
             if I > 0 and key in pending_keys:
                 print(f'SYNC-1: {round(key)}')
                 pending_keys[key] = 10
@@ -67,7 +67,7 @@ def frame_detect(winset):
                 update_keys[key] = 1
 
             # Detect the second sync word (16)
-            I, key = pf.peak_nearest(state_keys, ((-1 + sym.fft_bin + 32) % 2**SF) + 1, 2)
+            I, key = pf.nearest(state_keys, ((-1 + sym.fft_bin + 32) % 2**SF) + 1, 2)
 
             # Short-circuits if second condition isn't true so never
             # have missing key exception

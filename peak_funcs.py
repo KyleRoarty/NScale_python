@@ -3,7 +3,7 @@
 import numpy as np
 
 # Returns idx, value
-def peak_nearest(arr, target, threshold):
+def nearest(arr, target, threshold):
     if not arr or np.isnan(target):
         return -1, -1
 

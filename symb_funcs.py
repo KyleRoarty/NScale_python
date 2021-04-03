@@ -7,7 +7,7 @@ from classes import CSymbol
 from scipy.signal import chirp
 from scipy.fft import fft
 
-def symb_detect(sig):
+def detect(sig):
     Fs = config.RX_Sampl_Rate
     BW = config.LORA_BW
     SF = config.LORA_SF
@@ -20,7 +20,7 @@ def symb_detect(sig):
 
     for i in range(0,MAX_PK_NUM):
         # dechirping and fft
-        dn_chp = symb_gen_normal(0, True)
+        dn_chp = gen_normal(0, True)
         match_tone = np.multiply(sig, dn_chp)
         station_fout = fft(match_tone, int(nsamp*10))
 
@@ -84,18 +84,18 @@ def symb_detect(sig):
         if alpha < (amp_lb + amp_ub) / 2:
             seg_len = (alpha - amp_lb) * 2 / (amp_ub - amp_lb) * nsamp
             amp = pk_height / seg_len
-            dout, sym = symb_refine(True, seg_len[0], amp, freq[pk_index], sig)
+            dout, sym = refine(True, seg_len[0], amp, freq[pk_index], sig)
         else:
             seg_len = (amp_ub - alpha) * 2 / (amp_ub - amp_lb) * nsamp
             amp = pk_height / seg_len
-            dout, sym = symb_refine(False, seg_len[0], amp, freq[pk_index], sig)
+            dout, sym = refine(False, seg_len[0], amp, freq[pk_index], sig)
 
         symbols.append(sym)
         sig = dout
 
     return symbols
 
-def symb_gen_normal(code_word, down=False, Fs=config.RX_Sampl_Rate):
+def gen_normal(code_word, down=False, Fs=config.RX_Sampl_Rate):
     BW = config.LORA_BW
     SF = config.LORA_SF
 
@@ -129,7 +129,7 @@ def symb_gen_normal(code_word, down=False, Fs=config.RX_Sampl_Rate):
 
     return symb
 
-def symb_refine(near_prev, seg_length, seg_ampl, peak_freq, org_sig):
+def refine(near_prev, seg_length, seg_ampl, peak_freq, org_sig):
     Fs = config.RX_Sampl_Rate
     BW = config.LORA_BW
     SF = config.LORA_SF
@@ -146,7 +146,7 @@ def symb_refine(near_prev, seg_length, seg_ampl, peak_freq, org_sig):
     pending_phase = np.arange(0, 20)*2*np.pi/20
 
     for p in pending_phase:
-        sig = seg_ampl * symb_gen_phase(2**SF * (1 - peak_freq/BW), p, rphase_2)
+        sig = seg_ampl * gen_phase(2**SF * (1 - peak_freq/BW), p, rphase_2)
         if near_prev:
             sig[round(seg_length):] = 0
         else:
@@ -159,7 +159,7 @@ def symb_refine(near_prev, seg_length, seg_ampl, peak_freq, org_sig):
             dout = org_sig - sig
 
     for p in pending_phase:
-        sig = seg_ampl * symb_gen_phase(2**SF * (1 - peak_freq/BW), rphase_1, p)
+        sig = seg_ampl * gen_phase(2**SF * (1 - peak_freq/BW), rphase_1, p)
         if near_prev:
             sig[round(seg_length):] = 0
         else:
@@ -177,7 +177,7 @@ def symb_refine(near_prev, seg_length, seg_ampl, peak_freq, org_sig):
 
     tmp = seg_ampl * (np.arange(0, int((1.1-0.9)/0.01)+1)*0.01 + 0.9)
     for i in tmp:
-        sig - i * symb_gen_phase(2**SF * (1 - r_freq/BW), rphase_1, rphase_2)
+        sig - i * gen_phase(2**SF * (1 - r_freq/BW), rphase_1, rphase_2)
         if near_prev:
             sig[round(seg_length):] = 0
         else:
@@ -193,7 +193,7 @@ def symb_refine(near_prev, seg_length, seg_ampl, peak_freq, org_sig):
     for i in tmp:
         if i < 0 or i > nsamp:
             continue
-        sig = r_ampl * symb_gen_phase(2**SF * (1 - r_freq/BW), rphase_1, rphase_2)
+        sig = r_ampl * gen_phase(2**SF * (1 - r_freq/BW), rphase_1, rphase_2)
         if near_prev:
             sig[round(i):] = 0
         else:
@@ -209,7 +209,7 @@ def symb_refine(near_prev, seg_length, seg_ampl, peak_freq, org_sig):
 
     return dout, sym
 
-def symb_gen_phase(k, phase1, phase2, is_down = False):
+def gen_phase(k, phase1, phase2, is_down = False):
     Fs = config.RX_Sampl_Rate
     BW = config.LORA_BW
     SF = config.LORA_SF

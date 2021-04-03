@@ -18,7 +18,7 @@ def main():
     nsamp = Fs * 2**SF / BW
 
     #Load raw signal
-    mdata = iof.io_read_iq('input/collisions_2(-10dB)')
+    mdata = iof.read_iq('input/collisions_2(-10dB)')
     #print(f'mdata: {len(mdata)}, {type(mdata)}')
 
     #frame_spectrum(mdata)
@@ -37,14 +37,14 @@ def main():
     symbs = [mdata[int(i*nsamp):int(i*nsamp+nsamp)] for i in range(0, num_wins)]
 
     for i in range(0, num_wins):
-        syms = sf.symb_detect(symbs[i])
+        syms = sf.detect(symbs[i])
 
         for s in syms:
             windows[i].addSymbol(s)
 
         windows[i].show()
 
-    start_win, bin_value = ff.frame_detect(windows)
+    start_win, bin_value = ff.detect(windows)
 
     if not start_win:
         print('ERROR: No packet is found!!!\n')
