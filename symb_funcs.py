@@ -237,3 +237,16 @@ def gen_phase(k, phase1, phase2, is_down = False):
 
     offset = round((2**SF - k) / 2**SF * nsamp)
     return baseline[offset:int(offset+nsamp)]
+
+def freq_alias(datain):
+    Fs = config.RX_Sampl_Rate
+    BW = config.LORA_BW
+
+    nfft = datain.size
+    target_nfft = round(BW/Fs*nfft)
+
+    slice1 = datain[:target_nfft]
+    slice2 = datain[-target_nfft:]
+    ret_arr = np.add(np.abs(slice1), np.abs(slice2))
+
+    return ret_arr

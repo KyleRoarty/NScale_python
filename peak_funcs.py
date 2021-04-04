@@ -4,7 +4,7 @@ import numpy as np
 
 # Returns idx, value
 def nearest(arr, target, threshold):
-    if not arr or np.isnan(target):
+    if arr.size == 0 or np.isnan(target):
         return -1, -1
 
     min_idx = np.argmin(np.abs(arr-target))
