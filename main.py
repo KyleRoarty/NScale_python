@@ -44,6 +44,8 @@ def main():
 
         windows[i].show()
 
+    ## Section 3
+    # Detect LoRa frames by preambles
     start_win, bin_value = ff.detect(windows)
 
     if not start_win:

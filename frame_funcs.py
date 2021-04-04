@@ -79,7 +79,7 @@ def detect(winset):
                 update_keys[key] = 0
 
         for key in state_keys:
-            if key in pending_keys and pending_keys[k] > 0:
+            if key in pending_keys and pending_keys[key] > 0:
                 if update_keys[key] == 0:
                     pending_keys[key] -= 1
                     update_keys[key] = 1

@@ -7,7 +7,7 @@ def nearest(arr, target, threshold):
     if not arr or np.isnan(target):
         return -1, -1
 
-    min_idx = np.argmin(arr)
+    min_idx = np.argmin(np.abs(arr-target))
 
     if np.absolute(arr[min_idx] - target) > threshold:
         return -1, -1

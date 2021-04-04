@@ -38,13 +38,13 @@ def detect(sig):
         pk_phase = 0
 
         # Iterative compensate phase rotation
-        align_win_len = int(station_fout.size / (Fs/BW))
+        align_win_len = station_fout.size / (Fs/BW)
 
         pending_phase = np.arange(0, 20)*2*np.pi/20
 
         for p in pending_phase:
-            non_scal_targ = np.exp(1j * p) * station_fout[:,0:align_win_len] +\
-            station_fout[:,-align_win_len:]
+            non_scal_targ = np.exp(1j * p) * station_fout[:,0:int(align_win_len)] +\
+            station_fout[:,-int(align_win_len):]
 
             if np.max(np.absolute(non_scal_targ)) > pk_height:
                 pk_index = np.argmax(np.absolute(non_scal_targ))
@@ -60,10 +60,14 @@ def detect(sig):
 
         # Determin if peak is legitimate or duplicated
         repeat = False
-        cbin = (1 - pk_index/align_win_len) * 2**SF
+        # Add 1 to pk_index because matlab is 1-indexed but python
+        # is 0-indexed
+        cbin = (1 - (pk_index+1)/align_win_len) * 2**SF
+        rsym = 0
 
         for s in symbols:
             if np.absolute(s.fft_bin - cbin) < 2:
+                rsym = s.fft_bin
                 repeat = True
                 break
 
@@ -71,8 +75,8 @@ def detect(sig):
             break
 
         # Scaling factor of peaks: alpha
-        non_scal_targ = np.exp(1j * pk_phase) * non_station_fout[:,0:align_win_len] +\
-        non_station_fout[:,-align_win_len:]
+        non_scal_targ = np.exp(1j * pk_phase) * non_station_fout[:,0:int(align_win_len)] +\
+        non_station_fout[:,-int(align_win_len):]
 
         alpha = np.absolute(non_scal_targ[:,pk_index]) / pk_height
 
@@ -110,8 +114,8 @@ def gen_normal(code_word, down=False, Fs=config.RX_Sampl_Rate):
     f0 = -BW/2
     f1 = BW/2
 
-    chirpI = chirp(T, f0, 2**SF/BW, f1, 'linear', 0)
-    chirpQ = chirp(T, f0, 2**SF/BW, f1, 'linear', 90)
+    chirpI = chirp(T, f0, 2**SF/BW, f1, 'linear', 90)
+    chirpQ = chirp(T, f0, 2**SF/BW, f1, 'linear', 0)
 
     baseline = chirpI + 1j * chirpQ
 
@@ -177,7 +181,7 @@ def refine(near_prev, seg_length, seg_ampl, peak_freq, org_sig):
 
     tmp = seg_ampl * (np.arange(0, int((1.1-0.9)/0.01)+1)*0.01 + 0.9)
     for i in tmp:
-        sig - i * gen_phase(2**SF * (1 - r_freq/BW), rphase_1, rphase_2)
+        sig = i * gen_phase(2**SF * (1 - r_freq/BW), rphase_1, rphase_2)
         if near_prev:
             sig[round(seg_length):] = 0
         else:
