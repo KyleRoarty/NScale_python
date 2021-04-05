@@ -22,6 +22,7 @@ def detect(sig):
     for i in range(0,MAX_PK_NUM):
         # dechirping and fft
         dn_chp = gen_normal(0, True)
+        dn_chp = dn_chp.reshape((dn_chp.size))
         match_tone = np.multiply(sig, dn_chp)
         station_fout = fft(match_tone, int(nsamp*10))
 
@@ -32,6 +33,7 @@ def detect(sig):
         scal_func = np.linspace(amp_lb, amp_ub, int(nsamp))
         match_tone = np.multiply(sig, np.multiply(scal_func, dn_chp))
         non_station_fout = fft(match_tone, int(nsamp*10))
+        non_station_fout = non_station_fout.reshape((non_station_fout.size))
 
         # peak information
         pk_height = -1
@@ -44,12 +46,12 @@ def detect(sig):
         pending_phase = np.arange(0, 20)*2*np.pi/20
 
         for p in pending_phase:
-            non_scal_targ = np.exp(1j * p) * station_fout[:,0:int(align_win_len)] +\
-            station_fout[:,-int(align_win_len):]
+            non_scal_targ = np.exp(1j * p) * station_fout[0:int(align_win_len)] +\
+            station_fout[-int(align_win_len):]
 
             if np.max(np.absolute(non_scal_targ)) > pk_height:
                 pk_index = np.argmax(np.absolute(non_scal_targ))
-                pk_height = np.absolute(non_scal_targ)[:,pk_index]
+                pk_height = np.absolute(non_scal_targ)[pk_index]
                 pk_phase = p
 
         # Threshold for peak detecting
@@ -76,10 +78,10 @@ def detect(sig):
             break
 
         # Scaling factor of peaks: alpha
-        non_scal_targ = np.exp(1j * pk_phase) * non_station_fout[:,0:int(align_win_len)] +\
-        non_station_fout[:,-int(align_win_len):]
+        non_scal_targ = np.exp(1j * pk_phase) * non_station_fout[0:int(align_win_len)] +\
+        non_station_fout[-int(align_win_len):]
 
-        alpha = np.absolute(non_scal_targ[:,pk_index]) / pk_height
+        alpha = np.absolute(non_scal_targ[pk_index]) / pk_height
 
         # Abnormal alpha
         if alpha < amp_lb or alpha > amp_ub:
@@ -89,11 +91,11 @@ def detect(sig):
         if alpha < (amp_lb + amp_ub) / 2:
             seg_len = (alpha - amp_lb) * 2 / (amp_ub - amp_lb) * nsamp
             amp = pk_height / seg_len
-            dout, sym = refine(True, seg_len[0], amp, freq[pk_index], sig)
+            dout, sym = refine(True, seg_len, amp, freq[pk_index], sig)
         else:
             seg_len = (amp_ub - alpha) * 2 / (amp_ub - amp_lb) * nsamp
             amp = pk_height / seg_len
-            dout, sym = refine(False, seg_len[0], amp, freq[pk_index], sig)
+            dout, sym = refine(False, seg_len, amp, freq[pk_index], sig)
 
         symbols.append(sym)
         sig = dout
@@ -116,21 +118,23 @@ def gen_normal(code_word, down=False, Fs=config.RX_Sampl_Rate):
     f1 = BW/2
 
     chirpI = chirp(T, f0, 2**SF/BW, f1, 'linear', 90)
+    chirpI.reshape((chirpI.size))
     chirpQ = chirp(T, f0, 2**SF/BW, f1, 'linear', 0)
+    chirpQ.reshape((chirpQ.size))
 
     baseline = chirpI + 1j * chirpQ
 
     if down:
         baseline = np.conjugate(baseline)
 
-    baseline = np.tile(baseline, (1, 2))
+    baseline = np.tile(baseline, 2)
 
     offset = round((2**SF - code_word) / 2**SF * nsamp)
-    symb = baseline[:,offset:int(offset+nsamp)]
+    symb = baseline[offset:int(offset+nsamp)]
 
     if org_Fs != Fs:
         overSamp = int(Fs/org_Fs)
-        symb = symb[:,0::overSamp]
+        symb = symb[0::overSamp]
 
     return symb
 
