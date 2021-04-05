@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import config
+import csv
 import numpy as np
 import peak_funcs as pf
 import symb_funcs as sf
@@ -143,3 +144,47 @@ def cal_offset(upsig, downsig):
     sto = (dnf - cfo) / BW * (2**SF/BW)
 
     return cfo, sto
+
+def show(outfile):
+    max_payload = config.Max_Payload_Num
+    value = []
+    symb = []
+    frame_num = 0
+    with open(outfile, 'r') as f:
+        freader = csv.reader(f)
+
+        frame_num = int(next(freader)[0])
+
+        # Skip header
+        next(freader)
+
+        value = [[] for i in range(frame_num)]
+        symb = [[] for i in range(frame_num)]
+        for line in freader:
+            # Maybe there's a better way than hard-coding
+            idx = int(line[5])
+            value[idx].append(float(line[6]))
+            symb[idx].append(float(line[3]))
+
+    for loop in range(0, frame_num):
+        var = value[loop]
+        length = symb[loop]
+
+        ST = [1,0]
+        ED = [len(length), 0]
+
+        for loop2 in range(len(length)):
+            if length[loop2] > 0 and ST[1] == 0:
+                ST[0] = loop2
+                ST[1] = 1
+
+            if length[len(length) - loop2 - 1] > 0 and ED[1] == 0:
+                ED[0] = len(length) - loop2
+                ED[1] = 1
+
+        ED = min(ED[0], ST[0]+max_payload)
+        tmp = var[ST[0]:ED]
+        print(f'Packet{loop}: ', end='')
+        for blah in tmp:
+            print(f'{blah}, ', end='')
+        print('END')

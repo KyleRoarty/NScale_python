@@ -2,8 +2,9 @@
 
 import config
 import numpy as np
+import peak_funcs as pf
 
-from classes import CSymbol
+from classes import CSymbol, CPacket
 from scipy.signal import chirp
 from scipy.fft import fft
 
@@ -250,3 +251,45 @@ def freq_alias(datain):
     ret_arr = np.add(np.abs(slice1), np.abs(slice2))
 
     return ret_arr
+
+def group(syms, pkts, wid):
+    Fs = config.RX_Sampl_Rate
+    BW = config.LORA_BW
+    SF = config.LORA_SF
+    nsamp = Fs * 2**SF / BW
+
+    dout = []
+
+    for pid in range(0, len(pkts)):
+        pkt = pkts[pid]
+
+        if wid < pkt.start_win + 11:
+            continue
+
+        lenset = np.zeros(len(syms))
+        for i in range(0, len(syms)):
+            if syms[i].ahead:
+                if syms[i].length >= nsamp / 2:
+                    lenset[i] = syms[i].length
+            else:
+                if syms[i].length >= nsamp / 2:
+                    lenset[i] = nsamp - syms[i].length
+
+        I, val = pf.nearest(lenset, pkt.to, nsamp / 25)
+
+        print(f'PKT[{round(pkt.to)}]: ', end='')
+        for l in lenset:
+            print(f'{round(l)} ', end='')
+        print('\n', end='')
+
+        if I < 0:
+            sym = CSymbol(True, 0, 1, 0)
+            sym.belong(pid)
+            dout.append(sym)
+        else:
+            sym = syms[I]
+            del syms[I]
+            sym.belong(pid)
+            dout.append(sym)
+
+    return dout

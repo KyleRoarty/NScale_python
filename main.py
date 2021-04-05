@@ -4,6 +4,7 @@ import config
 import io_funcs as iof
 import math
 import numpy as np
+import os
 import symb_funcs as sf
 import frame_funcs as ff
 
@@ -68,6 +69,37 @@ def main():
         sto = np.remainder(np.round(sto*Fs+offset+.25*nsamp), nsamp)
         packet_set[i] = CPacket(start_win[i], cfo, sto)
         print(f'Packet from {i}: CFO = {cfo:.2f}, TO = {sto}\n')
+
+    ## Section 5
+    # Group each symbol to corresponding TX
+
+    # TODO: ensure outdir is created
+    outfile = 'output/result.csv'
+    if os.path.exists(outfile):
+        os.remove(outfile)
+
+    iof.write_text(outfile, f'{len(packet_set)}\n')
+    iof.write_text(outfile, f'window,bin,offset,len,amplitude,belong,value')
+
+    for w in windows:
+        print(f'Window({w.ident})')
+
+        symset = sf.group(w.symset, packet_set, w.ident)
+
+        for s in symset:
+            s.show()
+
+            sto = nsamp - packet_set[s.pkt_id].to
+            cfo = 2**SF * packet_set[s.pkt_id].cfo / BW
+
+            value = np.mod(2**SF - s.fft_bin - sto/nsamp*2**SF - cfo, 2**SF)
+
+            print(f'\t\t     value = {round(value)}')
+            s.write_file(outfile, w.ident, s.pkt_id, round(value))
+
+    ff.show(outfile)
+
+    print('Experiment Finished!')
 
 if __name__ == '__main__':
     main()

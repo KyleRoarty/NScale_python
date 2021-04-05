@@ -11,7 +11,7 @@ class CPacket:
 
     def show(self):
         print(f'\t[packet] start from window{self.start_win}, '
-              f'cfo = {self.cfo:.2f}, to = {self.to:.2f}\n')
+              f'cfo = {self.cfo:.2f}, to = {self.to:.2f}')
 
 class CPeak:
     def __init__(self, height, freq, sf):
@@ -27,7 +27,7 @@ class CPeak:
 
     def show(self):
         print(f'\t[peak] frequency = {self.freq:.2f}, '
-              f'height = {sef.height:.2f}, value = {self.fft_bin:.2f}\n')
+              f'height = {sef.height:.2f}, value = {self.fft_bin:.2f}')
 
 class CSymbol:
     Fs = config.RX_Sampl_Rate
@@ -57,7 +57,7 @@ class CSymbol:
               f' length = {round(self.length)}, ahead = {self.ahead}, '
               f'belong = {self.pkt_id}\n'
               f'\t       in-window offset = '
-              f'{round(self.chirp_n - self.length) if self.ahead else round(self.length)}\n')
+              f'{round(self.chirp_n - self.length) if self.ahead else round(self.length)}')
 
     def write_file(self, filename, wid, belong, value):
         if self.ahead:
@@ -66,7 +66,7 @@ class CSymbol:
             offset = round(self.length)
 
         with open(filename, 'a') as f:
-            s = f'\n{wid},{obj.fft_bin:.1f},{offset},{round(self.length)},{self.amp*100:.2f},{belong},{value}'
+            s = f'\n{wid},{self.fft_bin:.1f},{offset},{round(self.length)},{self.amp*100:.2f},{belong},{value}'
             f.write(s)
 
     def belong(self, pkt_id):
@@ -88,6 +88,6 @@ class CWin:
             return False
 
     def show(self):
-        print(f'Symbol Set {self.ident} ({len(self.symset)} items):\n')
+        print(f'Symbol Set {self.ident} ({len(self.symset)} items):')
         for sym in self.symset:
             sym.show()
