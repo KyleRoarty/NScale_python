@@ -6,6 +6,7 @@ import math
 import numpy as np
 import os
 import symb_funcs as sf
+import time
 import frame_funcs as ff
 
 from classes import CWin, CPacket
@@ -19,10 +20,15 @@ def main():
     nsamp = Fs * 2**SF / BW
 
     #Load raw signal
-    mdata = iof.read_iq('input/collisions_2(-10dB)')
+    #mdata = iof.read_iq('input/collisions_2(-10dB)')
+    mdata = iof.read_iq('Packet_Collision_data_SF8/1_tx')
+    mdata = mdata[1532487:1645720]
     #print(f'mdata: {len(mdata)}, {type(mdata)}')
 
     #frame_spectrum(mdata)
+
+    # Start
+    start_time = time.time()
 
     ## Section 2
     # Detect symbol in-window distribution
@@ -99,7 +105,8 @@ def main():
 
     ff.show(outfile)
 
-    print('Experiment Finished!')
+    end_time = time.time()
+    print(f'Experiment finished in {end_time - start_time} seconds')
 
 if __name__ == '__main__':
     main()
