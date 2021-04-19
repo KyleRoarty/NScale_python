@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import config
 import io_funcs as iof
 import math
@@ -12,6 +13,12 @@ import frame_funcs as ff
 from classes import CWin, CPacket
 
 def main():
+    # Argument parsing
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--verbose', action='store_true', help='Print stuff')
+
+    args = parser.parse_args()
+
     ## Section 1
     Fs = config.RX_Sampl_Rate
     BW = config.LORA_BW
@@ -49,11 +56,12 @@ def main():
         for s in syms:
             windows[i].addSymbol(s)
 
-        windows[i].show()
+        if args.verbose == True:
+            windows[i].show()
 
     ## Section 3
     # Detect LoRa frames by preambles
-    start_win, bin_value = ff.detect(windows)
+    start_win, bin_value = ff.detect(windows, args.verbose)
 
     if not start_win:
         print('ERROR: No packet is found!!!\n')
@@ -63,7 +71,8 @@ def main():
     # Detect STO and CFO for each frame
     packet_set = [CPacket(0, 0, 0)] * len(start_win)
     for i in range(0, len(start_win)):
-        print(f'y({start_win[i]}),value({bin_value[i]:.1f})')
+        if args.verbose == True:
+            print(f'y({start_win[i]}),value({bin_value[i]:.1f})')
 
         offset = round(bin_value[i] / 2**SF * nsamp)
 
@@ -74,7 +83,8 @@ def main():
         cfo, sto = ff.cal_offset(upsig, downsig)
         sto = np.remainder(np.round(sto*Fs+offset+.25*nsamp), nsamp)
         packet_set[i] = CPacket(start_win[i], cfo, sto)
-        print(f'Packet from {i}: CFO = {cfo:.2f}, TO = {sto}\n')
+        if args.verbose == True:
+            print(f'Packet from {i}: CFO = {cfo:.2f}, TO = {sto}\n')
 
     ## Section 5
     # Group each symbol to corresponding TX
@@ -88,22 +98,25 @@ def main():
     iof.write_text(outfile, f'window,bin,offset,len,amplitude,belong,value')
 
     for w in windows:
-        print(f'Window({w.ident})')
+        if args.verbose == True:
+            print(f'Window({w.ident})')
 
-        symset = sf.group(w.symset, packet_set, w.ident)
+        symset = sf.group(w.symset, packet_set, w.ident, args.verbose)
 
         for s in symset:
-            s.show()
+            if args.verbose == True:
+                s.show()
 
             sto = nsamp - packet_set[s.pkt_id].to
             cfo = 2**SF * packet_set[s.pkt_id].cfo / BW
 
             value = np.mod(2**SF - s.fft_bin - sto/nsamp*2**SF - cfo, 2**SF)
 
-            print(f'\t\t     value = {round(value)}')
+            if args.verbose == True:
+                print(f'\t\t     value = {round(value)}')
             s.write_file(outfile, w.ident, s.pkt_id, round(value))
 
-    ff.show(outfile)
+    ff.show(outfile, True)
 
     end_time = time.time()
     print(f'Experiment finished in {end_time - start_time} seconds')

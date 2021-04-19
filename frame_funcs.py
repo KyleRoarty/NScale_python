@@ -19,7 +19,7 @@ def spectrum(data, window=512, overlap=256, nfft=2048,
         overlap = 60
         nfft = 2048
 
-def detect(winset):
+def detect(winset, verbose=False):
     Fs = config.RX_Sampl_Rate
     BW = config.LORA_BW
     SF = config.LORA_SF
@@ -32,22 +32,27 @@ def detect(winset):
     pending_keys = {}
 
     for i in range(0, len(winset)):
-        print(f'window({i})')
+        if verbose:
+            print(f'window({i})')
 
         state_keys = list(state_dict)
         update_keys = {}
-        print(f'Keys:', end='')
         for k in state_keys:
             update_keys[k] = 0
-            print(f' {round(k)}', end='')
-        print(f'\n', end='')
+
+        if verbose:
+            print(f'Keys:', end='')
+            for k in state_keys:
+                print(f' {round(k)}', end='')
+            print(f'\n', end='')
 
 
         symbset = winset[i].symset
-        print(f'symbs:', end='')
-        for k in symbset:
-            print(f' {round(k.fft_bin)}', end='')
-        print('\n', end='')
+        if verbose:
+            print(f'symbs:', end='')
+            for k in symbset:
+                print(f' {round(k.fft_bin)}', end='')
+            print('\n', end='')
 
         for sym in symbset:
             # Detect consecutive preambles
@@ -59,13 +64,15 @@ def detect(winset):
                 state_dict[key] += 1
                 update_keys[key] = 1
                 if state_dict[key] >= 5:
-                    print(f"Set pending key for key {key}")
+                    if verbose:
+                        print(f"Set pending key for key {key}")
                     pending_keys[key] = 10
 
             # Detect the first sync word (8)
             I, key = pf.nearest(np.array(state_keys), np.mod(sym.fft_bin + 8, 2**SF), 2)
             if I >= 0 and key in pending_keys:
-                print(f'SYNC-1: {round(key)}')
+                if verbose:
+                    print(f'SYNC-1: {round(key)}')
                 pending_keys[key] = 10
                 state_dict[key] += 1
                 update_keys[key] = 1
@@ -76,7 +83,8 @@ def detect(winset):
             # Short-circuits if second condition isn't true so never
             # have missing key exception
             if I >= 0 and key in pending_keys and pending_keys[key] > 5:
-                print(f'SYNC-2: {round(key)}\t Frame Detected')
+                if verbose:
+                    print(f'SYNC-2: {round(key)}\t Frame Detected')
                 start.append(i-9)
                 value.append(key)
                 del pending_keys[key]
@@ -90,7 +98,8 @@ def detect(winset):
 
             if update_keys[key] == 0:
                 del state_dict[key]
-                print(f'\tRemove {key:.2f} from table')
+                if verbose:
+                    print(f'\tRemove {key:.2f} from table')
 
     return start, value
 
@@ -145,7 +154,7 @@ def cal_offset(upsig, downsig):
 
     return cfo, sto
 
-def show(outfile):
+def show(outfile, verbose=False):
     max_payload = config.Max_Payload_Num
     value = []
     symb = []
@@ -184,7 +193,8 @@ def show(outfile):
 
         ED = min(ED[0], ST[0]+max_payload)
         tmp = var[ST[0]:ED]
-        print(f'Packet{loop}: ', end='')
-        for blah in tmp:
-            print(f'{blah}, ', end='')
-        print('END')
+        if verbose:
+            print(f'Packet{loop}: ', end='')
+            for blah in tmp:
+                print(f'{blah}, ', end='')
+            print('END')

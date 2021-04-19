@@ -256,7 +256,7 @@ def freq_alias(datain):
 
     return ret_arr
 
-def group(syms, pkts, wid):
+def group(syms, pkts, wid, verbose=False):
     Fs = config.RX_Sampl_Rate
     BW = config.LORA_BW
     SF = config.LORA_SF
@@ -281,10 +281,11 @@ def group(syms, pkts, wid):
 
         I, val = pf.nearest(lenset, pkt.to, nsamp / 10)
 
-        print(f'PKT[{round(pkt.to)}]: ', end='')
-        for l in lenset:
-            print(f'{round(l)} ', end='')
-        print('\n', end='')
+        if verbose:
+            print(f'PKT[{round(pkt.to)}]: ', end='')
+            for l in lenset:
+                print(f'{round(l)} ', end='')
+            print('\n', end='')
 
         if I < 0:
             sym = CSymbol(True, 0, 1, 0)
