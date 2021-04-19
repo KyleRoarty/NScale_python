@@ -63,7 +63,7 @@ def detect(winset):
                     pending_keys[key] = 10
 
             # Detect the first sync word (8)
-            I, key = pf.nearest(np.array(state_keys), np.mod(sym.fft_bin + 24, 2**SF), 2)
+            I, key = pf.nearest(np.array(state_keys), np.mod(sym.fft_bin + 8, 2**SF), 2)
             if I >= 0 and key in pending_keys:
                 print(f'SYNC-1: {round(key)}')
                 pending_keys[key] = 10
@@ -71,7 +71,7 @@ def detect(winset):
                 update_keys[key] = 1
 
             # Detect the second sync word (16)
-            I, key = pf.nearest(np.array(state_keys), np.mod(sym.fft_bin + 32, 2**SF), 2)
+            I, key = pf.nearest(np.array(state_keys), np.mod(sym.fft_bin + 16, 2**SF), 2)
 
             # Short-circuits if second condition isn't true so never
             # have missing key exception

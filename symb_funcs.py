@@ -279,7 +279,7 @@ def group(syms, pkts, wid):
                 if syms[i].length >= nsamp / 2:
                     lenset[i] = nsamp - syms[i].length
 
-        I, val = pf.nearest(lenset, pkt.to, nsamp / 25)
+        I, val = pf.nearest(lenset, pkt.to, nsamp / 10)
 
         print(f'PKT[{round(pkt.to)}]: ', end='')
         for l in lenset:
