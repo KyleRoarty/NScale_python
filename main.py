@@ -4,6 +4,7 @@ import argparse
 import config
 import io_funcs as iof
 import math
+import multiprocessing
 import numpy as np
 import os
 import symb_funcs as sf
@@ -40,7 +41,7 @@ def main():
     ## Section 2
     # Detect symbol in-window distribution
     num_wins = math.ceil(len(mdata) / nsamp)
-    windows = [CWin(i) for i in range(0, num_wins)]
+    windows = [CWin(i) for i in range(num_wins)]
 
     # Pad mdata
     pad = np.zeros(int(nsamp*num_wins - len(mdata)), np.complex64)
@@ -48,15 +49,18 @@ def main():
     mdata = np.append(mdata,pad)
     #print(len(mdata))
 
-    symbs = [mdata[int(i*nsamp):int(i*nsamp+nsamp)] for i in range(0, num_wins)]
+    symbs = [mdata[int(i*nsamp):int(i*nsamp+nsamp)] for i in range(num_wins)]
 
-    for i in range(0, num_wins):
-        syms = sf.detect(symbs[i])
+    pool = multiprocessing.Pool(multiprocessing.cpu_count())
 
-        for s in syms:
+    results = [pool.apply_async(sf.detect, args=(symbs[i], )) for i in range(num_wins)]
+
+    res = [r.get() for r in results]
+
+    for i in range(num_wins):
+        for s in res[i]:
             windows[i].addSymbol(s)
-
-        if args.verbose == True:
+        if args.verbose:
             windows[i].show()
 
     ## Section 3
@@ -70,19 +74,19 @@ def main():
     ## Section 4
     # Detect STO and CFO for each frame
     packet_set = [CPacket(0, 0, 0)] * len(start_win)
-    for i in range(0, len(start_win)):
+
+    results = [pool.apply_async(ff.cal_offset, args=(mdata[(start_win[i]+2+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) : (start_win[i]+2+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) + int(nsamp)], mdata[(start_win[i]+9+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) : (start_win[i]+9+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) + int(nsamp)])) for i in range(len(start_win))]
+
+    res = [r.get() for r in results]
+
+    for i in range(len(start_win)):
         if args.verbose == True:
             print(f'y({start_win[i]}),value({bin_value[i]:.1f})')
 
         offset = round(bin_value[i] / 2**SF * nsamp)
 
-        # Extra +1 because matlab was 1-indexed but python is 0-indexed
-        upsig = mdata[(start_win[i]+2+1)*int(nsamp) + offset : (start_win[i]+2+1)*int(nsamp)+offset+int(nsamp)]
-        downsig = mdata[(start_win[i]+9+1)*int(nsamp) + offset : (start_win[i]+9+1)*int(nsamp)+offset+int(nsamp)]
-
-        cfo, sto = ff.cal_offset(upsig, downsig)
-        sto = np.remainder(np.round(sto*Fs+offset+.25*nsamp), nsamp)
-        packet_set[i] = CPacket(start_win[i], cfo, sto)
+        sto = np.remainder(np.round(res[i][1]*Fs+offset+.25*nsamp), nsamp)
+        packet_set[i] = CPacket(start_win[i], res[i][0], sto)
         if args.verbose == True:
             print(f'Packet from {i}: CFO = {cfo:.2f}, TO = {sto}\n')
 
@@ -97,13 +101,15 @@ def main():
     iof.write_text(outfile, f'{len(packet_set)}\n')
     iof.write_text(outfile, f'window,bin,offset,len,amplitude,belong,value')
 
-    for w in windows:
+    results = [pool.apply_async(sf.group, args=(w.symset, packet_set, w.ident, args.verbose)) for w in windows]
+
+    symsets = [r.get() for r in results]
+
+    for i in range(len(windows)):
         if args.verbose == True:
-            print(f'Window({w.ident})')
+            print(f'Window({windows[i].ident})')
 
-        symset = sf.group(w.symset, packet_set, w.ident, args.verbose)
-
-        for s in symset:
+        for s in symsets[i]:
             if args.verbose == True:
                 s.show()
 
@@ -114,7 +120,7 @@ def main():
 
             if args.verbose == True:
                 print(f'\t\t     value = {round(value)}')
-            s.write_file(outfile, w.ident, s.pkt_id, round(value))
+            s.write_file(outfile, windows[i].ident, s.pkt_id, round(value))
 
     ff.show(outfile, True)
 
