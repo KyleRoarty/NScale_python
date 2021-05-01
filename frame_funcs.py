@@ -69,7 +69,7 @@ def detect(winset, verbose=False):
                     pending_keys[key] = 10
 
             # Detect the first sync word (8)
-            I, key = pf.nearest(np.array(state_keys), np.mod(sym.fft_bin + 8, 2**SF), 2)
+            I, key = pf.nearest(np.array(state_keys), np.mod(sym.fft_bin + config.SW1, 2**SF), 2)
             if I >= 0 and key in pending_keys:
                 if verbose:
                     print(f'SYNC-1: {round(key)}')
@@ -78,7 +78,7 @@ def detect(winset, verbose=False):
                 update_keys[key] = 1
 
             # Detect the second sync word (16)
-            I, key = pf.nearest(np.array(state_keys), np.mod(sym.fft_bin + 16, 2**SF), 2)
+            I, key = pf.nearest(np.array(state_keys), np.mod(sym.fft_bin + config.SW2, 2**SF), 2)
 
             # Short-circuits if second condition isn't true so never
             # have missing key exception
@@ -143,12 +143,11 @@ def cal_offset(upsig, downsig):
     idx = np.argmax(np.abs(dnz))
     dnf = freq_idx[idx]
 
+    if dnf > 2e3:
+        dnf = dnf - BW
+    if upf > 2e3:
+        upf = upf - BW
     cfo = (upf + dnf) / 2
-    if abs(cfo) > 50e3:
-        if cfo < 0:
-            cfo += BW/2
-        else:
-            cfo -= BW/2
 
     sto = (dnf - cfo) / BW * (2**SF/BW)
 

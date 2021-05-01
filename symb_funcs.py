@@ -267,7 +267,7 @@ def group(syms, pkts, wid, verbose=False):
     for pid in range(0, len(pkts)):
         pkt = pkts[pid]
 
-        if wid < pkt.start_win + 11:
+        if wid < pkt.start_win + 12:
             continue
 
         lenset = np.zeros(len(syms))
@@ -279,7 +279,7 @@ def group(syms, pkts, wid, verbose=False):
                 if syms[i].length >= nsamp / 2:
                     lenset[i] = nsamp - syms[i].length
 
-        I, val = pf.nearest(lenset, pkt.to, nsamp / 10)
+        I, val = pf.nearest(lenset, pkt.to, nsamp / config.samp_group)
 
         if verbose:
             print(f'PKT[{round(pkt.to)}]: ', end='')
