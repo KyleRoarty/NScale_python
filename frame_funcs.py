@@ -173,7 +173,7 @@ def show(outfile, verbose=False):
             idx = int(line[5])
             value[idx].append(float(line[6]))
             symb[idx].append(float(line[3]))
-
+    pckt_array = []
     for loop in range(0, frame_num):
         var = value[loop]
         length = symb[loop]
@@ -197,4 +197,5 @@ def show(outfile, verbose=False):
             for blah in tmp:
                 print(f'{blah}, ', end='')
             print('END')
-    return tmp
+        pckt_array.append(tmp)
+    return pckt_array

@@ -2,6 +2,7 @@
 
 import sys
 sys.path.append('C:\\Users\16085\\Desktop\\ECE901\\NScale_python')
+import frame_funcs as ff
 import argparse
 import config
 import io_funcs as iof
@@ -11,7 +12,7 @@ import numpy as np
 import os
 import symb_funcs as sf
 import time
-import frame_funcs as ff
+import lora_decode_pyth as lorad
 
 from classes import CWin, CPacket
 
@@ -31,8 +32,8 @@ def main():
 
     #Load raw signal
     #mdata = iof.read_iq('input/collisions_2(-10dB)')
-    mdata = iof.read_iq('Packet_Collision_data_SF8/1_tx')
-    mdata = mdata[1532487:1645720]
+    mdata = iof.read_iq('Packet_Collision_data_SF8//7_tx')
+    mdata = mdata[435043:33655356]
     #print(f'mdata: {len(mdata)}, {type(mdata)}')
 
     #frame_spectrum(mdata)
@@ -42,6 +43,7 @@ def main():
 
     ## Section 2
     # Detect symbol in-window distribution
+    print("Section 2: Detect symbol in-window distribution")
     num_wins = math.ceil(len(mdata) / nsamp)
     windows = [CWin(i) for i in range(num_wins)]
 
@@ -67,6 +69,7 @@ def main():
 
     ## Section 3
     # Detect LoRa frames by preambles
+    print("Section 3: Detect LoRa frames by preambles")
     start_win, bin_value = ff.detect(windows, args.verbose)
 
     if not start_win:
@@ -75,6 +78,7 @@ def main():
 
     ## Section 4
     # Detect STO and CFO for each frame
+    print("Section 4: Detect STO and CFO for each frame")
     packet_set = [CPacket(0, 0, 0)] * len(start_win)
 
     results = [pool.apply_async(ff.cal_offset, args=(mdata[(start_win[i]+2+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) : (start_win[i]+2+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) + int(nsamp)], mdata[(start_win[i]+9+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) : (start_win[i]+9+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) + int(nsamp)])) for i in range(len(start_win))]
@@ -95,7 +99,7 @@ def main():
 
     ## Section 5
     # Group each symbol to corresponding TX
-
+    print("Section 5: Group each symbol to corresponding TX")
     # TODO: ensure outdir is created
     outfile = 'output/result.csv'
     if os.path.exists(outfile):
@@ -126,7 +130,27 @@ def main():
             s.write_file(outfile, windows[i].ident, s.pkt_id, round(value))
 
     pckts = ff.show(outfile, True)
-
+    
+    ## Section 6 Decode Packets
+    print("Section 6 Decode Packets")
+    num_pckts = len(pckts)
+    num_decoded = 0
+    offset = 0
+    num = 0
+    for pckt in pckts:
+        print(f'Packet {num}:')
+        message = lorad.lora_decoder(np.add(pckt, offset), SF)
+        #check if decoded correctly
+        if(not(message is None)):
+            print(message)
+            num_decoded = num_decoded + 1
+            for bits in message:
+                print(chr(int(bits)), end =" ")
+        num = num + 1
+    
+    print('')
+    print(f'{num_decoded} out of {num_pckts} decoded')
+        
     end_time = time.time()
     print(f'Experiment finished in {end_time - start_time} seconds')
 
