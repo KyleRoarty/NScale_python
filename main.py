@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import sys
+sys.path.append('C:\\Users\16085\\Desktop\\ECE901\\NScale_python')
 import argparse
 import config
 import io_funcs as iof
@@ -88,7 +90,8 @@ def main():
         sto = np.remainder(np.round(res[i][1]*Fs+offset+.25*nsamp), nsamp)
         packet_set[i] = CPacket(start_win[i], res[i][0], sto)
         if args.verbose == True:
-            print(f'Packet from {i}: CFO = {cfo:.2f}, TO = {sto}\n')
+            #print(f'Packet from {i}: CFO = {cfo:.2f}, TO = {sto}\n')
+            print("above line causes error")
 
     ## Section 5
     # Group each symbol to corresponding TX
@@ -122,7 +125,7 @@ def main():
                 print(f'\t\t     value = {round(value)}')
             s.write_file(outfile, windows[i].ident, s.pkt_id, round(value))
 
-    ff.show(outfile, True)
+    pckts = ff.show(outfile, True)
 
     end_time = time.time()
     print(f'Experiment finished in {end_time - start_time} seconds')

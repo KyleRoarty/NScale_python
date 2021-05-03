@@ -197,3 +197,4 @@ def show(outfile, verbose=False):
             for blah in tmp:
                 print(f'{blah}, ', end='')
             print('END')
+    return tmp
