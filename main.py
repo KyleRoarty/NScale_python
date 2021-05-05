@@ -27,7 +27,7 @@ def ind_vals(arr, thresh, num_pts):
             arr[idx] = 0
     return out
 
-def UC_location_corr(Data, N, num_preamble, DC):
+def UC_location_corr(Data, N, num_preamble, DC, called_i, upsamp_factor, samp, overlap):
     upchirp_ind = []
     tmp_window = []
     DC_sum = sum(DC[0:N] * np.conj(DC[0:N]))
@@ -65,6 +65,8 @@ def UC_location_corr(Data, N, num_preamble, DC):
         for i in range(1, len(upchirp_ind)):
             if (np.min(np.abs(upchirp_ind[i] - temp[:])) > 5):
                 temp.append(upchirp_ind[i])
+    if len(temp) != 0:
+        return [int(idx * upsamp_factor + max(called_i*samp-overlap, 0)) for idx in temp]
     return temp
 
 def main():
@@ -104,13 +106,18 @@ def main():
     overlap = num_preamble * nsamp
     samp = math.floor(len(raw_data)/chunks)
     preamble_ind = []
-    for i in range(chunks):
-        buff = np.array(raw_data[max(int(i*samp - overlap), 0):int((i+1)*samp)])
-        indices = UC_location_corr(buff[::int(upsampling_factor)], N, num_preamble, DC[::int(upsampling_factor)])
-        if len(indices) != 0:
-            updated_indices = [int(idx * upsampling_factor + max(i*samp - overlap, 0)) for idx in indices]
-            preamble_ind.extend(updated_indices)
 
+    global_start = time.time()
+
+    pool = multiprocessing.Pool(multiprocessing.cpu_count())
+
+    results = [pool.apply_async(UC_location_corr, args=(np.array(raw_data[max(int(i*samp - overlap), 0):int((i+1)*samp)])[::int(upsampling_factor)], N, num_preamble, DC[::int(upsampling_factor)], i, upsampling_factor, samp, overlap)) for i in range(chunks)]
+    for r in results:
+        ret = r.get()
+        if len(ret) != 0:
+            preamble_ind.extend(ret)
+
+    print(f'Index processing done in {time.time() - global_start} seconds')
 
     for indice in preamble_ind:
         mdata = raw_data[indice - int(0.15 * nsamp) : indice + int(56.25 * nsamp)]
@@ -123,7 +130,6 @@ def main():
 
         ## Section 2
         # Detect symbol in-window distribution
-        print("Section 2: Detect symbol in-window distribution")
         num_wins = math.ceil(len(mdata) / nsamp)
         windows = [CWin(i) for i in range(num_wins)]
 
@@ -135,7 +141,6 @@ def main():
 
         symbs = [mdata[int(i*nsamp):int(i*nsamp+nsamp)] for i in range(num_wins)]
 
-        pool = multiprocessing.Pool(multiprocessing.cpu_count())
 
         results = [pool.apply_async(sf.detect, args=(symbs[i], )) for i in range(num_wins)]
 
@@ -149,7 +154,6 @@ def main():
 
         ## Section 3
         # Detect LoRa frames by preambles
-        print("Section 3: Detect LoRa frames by preambles")
         start_win, bin_value = ff.detect(windows, args.verbose)
 
         if not start_win:
@@ -158,7 +162,6 @@ def main():
 
         ## Section 4
         # Detect STO and CFO for each frame
-        print("Section 4: Detect STO and CFO for each frame")
         packet_set = [CPacket(0, 0, 0)] * len(start_win)
 
         results = [pool.apply_async(ff.cal_offset, args=(mdata[(start_win[i]+2+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) : (start_win[i]+2+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) + int(nsamp)], mdata[(start_win[i]+9+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) : (start_win[i]+9+1)*int(nsamp) + round(bin_value[i] / 2**SF * nsamp) + int(nsamp)])) for i in range(len(start_win))]
@@ -179,7 +182,6 @@ def main():
 
         ## Section 5
         # Group each symbol to corresponding TX
-        print("Section 5: Group each symbol to corresponding TX")
         # TODO: ensure outdir is created
         outfile = 'output/result.csv'
         if os.path.exists(outfile):
@@ -212,27 +214,29 @@ def main():
         pckts = ff.show(outfile, True)
 
         ## Section 6 Decode Packets
-        print("Section 6 Decode Packets")
-        num_pckts = len(pckts)
-        num_decoded = 0
-        offset = -1
-        num = 0
-        for pckt in pckts:
-            print(f'Packet {num}:')
-            message = lorad.lora_decoder(np.add(pckt, offset), SF)
-            #check if decoded correctly
-            if(not(message is None)):
-                print(message)
-                num_decoded = num_decoded + 1
-                for bits in message:
-                    print(chr(int(bits)), end =" ")
-            num = num + 1
+        #num_pckts = len(pckts)
+        #num_decoded = 0
+        #offset = -1
+        #num = 0
+        #for pckt in pckts:
+        #    print(f'Packet {num}:')
+        #    message = lorad.lora_decoder(np.add(pckt, offset), SF)
+        #    #check if decoded correctly
+        #    if(not(message is None)):
+        #        print(message)
+        #        num_decoded = num_decoded + 1
+        #        for bits in message:
+        #            print(chr(int(bits)), end =" ")
+        #    num = num + 1
 
-        print('')
-        print(f'{num_decoded} out of {num_pckts} decoded')
+        #print('')
+        #print(f'{num_decoded} out of {num_pckts} decoded')
 
         end_time = time.time()
         print(f'Experiment finished in {end_time - start_time} seconds')
+
+    global_end = time.time()
+    print(f'Completely done in time  {global_end - global_start} seconds')
 
 if __name__ == '__main__':
     main()
