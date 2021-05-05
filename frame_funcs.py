@@ -113,7 +113,7 @@ def cal_offset(upsig, downsig):
     dn_chp = sf.gen_normal(0, True)
     dn_chp = dn_chp.reshape((dn_chp.size))
     match_tone = np.multiply(upsig, dn_chp)
-    nfft = match_tone.size*10
+    nfft = match_tone.size*320
     fout = fft(match_tone, nfft)
     upz = sf.freq_alias(fout)
 

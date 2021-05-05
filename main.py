@@ -160,6 +160,12 @@ def main():
             print('ERROR: No packet is found!!!\n')
             return
 
+        if start_win[0] > 10:
+            continue
+
+        start_win = [start_win[0]]
+        bin_value = [bin_value[0]]
+
         ## Section 4
         # Detect STO and CFO for each frame
         packet_set = [CPacket(0, 0, 0)] * len(start_win)

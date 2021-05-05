@@ -14,7 +14,7 @@ def detect(sig):
     SF = config.LORA_SF
 
     nsamp = Fs * 2**SF / BW
-    MAX_PK_NUM = config.LORA_SF
+    MAX_PK_NUM = config.Max_Peak_Num
 
     symbols = []
     threshold = 0
@@ -261,14 +261,28 @@ def group(syms, pkts, wid, verbose=False):
     BW = config.LORA_BW
     SF = config.LORA_SF
     nsamp = Fs * 2**SF / BW
+    max_payload = config.Max_Payload_Num
 
     dout = []
 
     for pid in range(0, len(pkts)):
         pkt = pkts[pid]
 
-        if wid < pkt.start_win + 12:
+        if wid > pkt.start_win + 12 + max_payload:
             continue
+
+        c = 0
+        for i in range(len(pkts)):
+            if i == pid:
+                continue
+            if pkt.start_win < pkts(i).start_win:
+                c = c+1
+        if c == len(pkts) - 1:
+            if wid < pkt.start_win + 12:
+                continue
+        else:
+            if wid < pkt.start_win + 13:
+                continue
 
         lenset = np.zeros(len(syms))
         for i in range(0, len(syms)):
@@ -279,7 +293,7 @@ def group(syms, pkts, wid, verbose=False):
                 if syms[i].length >= nsamp / 2:
                     lenset[i] = nsamp - syms[i].length
 
-        I, val = pf.nearest(lenset, pkt.to, nsamp / config.samp_group)
+        I, val = pf.nearest(lenset, pkt.to, np.inf)
 
         if verbose:
             print(f'PKT[{round(pkt.to)}]: ', end='')
